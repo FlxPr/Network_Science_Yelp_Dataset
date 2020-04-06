@@ -5,6 +5,9 @@ import igraph
 from settings import file_names
 
 
+df = pd.read_json(file_names['review'], encoding='latin')
+
+
 def init_empty_lists(number_of_lists=4, list_length=100):
     for i in range(number_of_lists):
         yield [None] * list_length
@@ -90,7 +93,13 @@ def read_business_data(filter_by_city=None, save_to_csv=False):
     return df
 
 
-def read_user_data(filtered_users, parse_details=False):
+def filter_friend_list(friend_list: str, filtered_friends_dict):
+    friend_list = friend_list.split(", ")
+    friend_list = filter(lambda x: filtered_friends_dict.get(x), friend_list)
+    return ', '.join(friend_list)
+
+
+def read_user_data(filtered_users_dict, parse_details=False):
     with open(file_names['user'], encoding='utf-8') as f:
         line_count = len(f.readlines())
 
@@ -98,7 +107,7 @@ def read_user_data(filtered_users, parse_details=False):
         user_id, friends = [None] * line_count, [None] * line_count
         for i, line in enumerate(tqdm(f, total=line_count)):
             blob = json.loads(line)
-            if blob["user_id"] in filtered_users:
+            if filtered_users_dict.get(blob["user_id"]):
                 user_id[i] = blob["user_id"]
                 friends[i] = blob["friends"]
                 if parse_details:
@@ -114,7 +123,10 @@ def read_user_data(filtered_users, parse_details=False):
     df = pd.DataFrame({
         'user_id': user_id,
         'friends': friends
-    })
+    }).dropna(subset=['user_id'])
+
+    df.friends = df.friends.apply(lambda x: filter_friend_list(x, filtered_users_dict))
+
     return df
 
 
@@ -163,8 +175,8 @@ if __name__ == '__main__':
     # Save light version of reviews as csv -- to be uploaded on GitHub
     reviews_df.drop('text', axis=1).to_csv(file_names['toronto_reviews_without_text'])
 
-    # Filter users active in Toronto -- For now too time consuming
-    # user_df = read_user_data(filtered_users=reviews_df.user_id.unique())
-    # user_df.to_csv(file_names['toronto_users'], index=None)
-
-
+    # Filter users active in Toronto
+    reviews_df = pd.read_csv(file_names['toronto_reviews_without_text'])
+    toronto_locals = dict.fromkeys(reviews_df.user_id.unique(), 1)
+    user_df = read_user_data(filtered_users_dict=toronto_locals)
+    user_df.to_csv(file_names['toronto_users'], index=None)
