@@ -2,6 +2,8 @@ import pandas as pd
 from tqdm import tqdm
 import json
 from settings import file_names
+from graph import make_friends_graph
+from networkx import connected_components
 
 
 def init_empty_lists(number_of_lists=4, list_length=100):
@@ -158,6 +160,17 @@ def subset_toronto_data():
     toronto_locals = dict.fromkeys(reviews_df.user_id.unique(), 1)
     user_df = read_user_data(filtered_users_dict=toronto_locals)
     user_df.to_csv(file_names['toronto_users'], index=None)
+
+    # Filter users who are in the largest connected component of the social network
+    social_network = make_friends_graph()
+    filtered_locals = max(connected_components(social_network), key=len)
+    user_df = user_df[user_df.user_id.isin(filtered_locals)]
+    user_df.to_csv(file_names['toronto_users'], index=None)
+
+    # Remove reviews from removed users
+    reviews_df = reviews_df[reviews_df.user_id.isin(filtered_locals)]
+    reviews_df.to_csv(file_names['toronto_reviews'], index=None)
+    reviews_df.drop('text', axis=1).to_csv(file_names['toronto_reviews_without_text'], index=None)
 
 
 if __name__ == '__main__':
