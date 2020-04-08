@@ -1,7 +1,6 @@
 import pandas as pd
 from tqdm import tqdm
 import json
-import igraph
 from settings import file_names
 
 
@@ -10,34 +9,40 @@ def init_empty_lists(number_of_lists=4, list_length=100):
         yield [None] * list_length
 
 
-def read_review_data(filtered_businesses):  # Todo implement filter here
+def read_review_data(filtered_businesses: list = []):
     """
     Reads the review data and returns it as a pandas DataFrame
     The data file is 4GB. Might need to downsample it first (e.g. take only 1 country)
     :return:
     """
-    line_count = len(open(file_names['review'], encoding='utf-8').readlines())
-    user_ids, business_ids, stars, dates, texts = [], [], [], [], []
+    filtered_businesses = dict.fromkeys(filtered_businesses, 1)
+
     with open(file_names['review'], encoding='utf-8') as f:
-        for line in tqdm(f, total=line_count):
+        line_count = len(f.readlines())
+
+    user_ids, business_ids, stars, dates, texts = init_empty_lists(5, line_count)
+    with open(file_names['review'], encoding='utf-8') as f:
+        for i, line in enumerate(tqdm(f, total=line_count)):
             blob = json.loads(line)
-            if blob["business_id"] in filtered_businesses:
-                user_ids += [blob["user_id"]]
-                business_ids += [blob["business_id"]]
-                stars += [blob["stars"]]
-                dates += [blob["date"]]
-                texts += [blob["text"]]
+            if filtered_businesses is not None and filtered_businesses.get(blob['business_id']):
+                user_ids[i] = blob["user_id"]
+                business_ids[i] = blob["business_id"]
+                stars[i] = blob["stars"]
+                dates[i] = blob["date"]
+                texts[i] = blob["text"]
+
     ratings = pd.DataFrame(
         {"user_id": user_ids,
          "business_id": business_ids,
          "rating": stars,
          "date": dates,
          "text": texts}
-    )
+    ).dropna(how='all')
+
     return ratings
 
 
-def read_business_data(save_to_csv=False):
+def read_business_data():
     with open(file_names['business'], encoding='utf-8') as f:
         line_count = len(f.readlines())
 
@@ -74,7 +79,7 @@ def read_business_data(save_to_csv=False):
         'review_count': review_count,
         'attributes': attributes,
         'categories': categories
-    })
+    }).dropna(how='all')
 
     return df
 
@@ -128,17 +133,16 @@ def read_tip_data():
     pass
 
 
-if __name__ == '__main__':
-    # Filter businesses in Toronto
+def subset_toronto_data():
+    # Filter restaurants in Toronto
+    print('Filtering business data...')
     business_df = read_business_data()
-    business_df = business_df[business_df.city == 'Toronto']
-
-    # UNCOMMENT TO FILTER DOWN TO RESTAURANTS ONLY
-    # business_df = business_df.dropna(subset=['categories'])
-    # business_df = business_df[business_df.categories.str.contains('Restaurant')]
+    business_df = business_df.dropna(subset=['categories'])
+    business_df = business_df[(business_df.city == 'Toronto') & (business_df.categories.str.contains('Restaurant'))]
     business_df.to_csv(file_names['toronto_businesses'], index=None)
 
-    # Filter reviews in Toronto -- Very lengthy
+    # Filter reviews in Toronto
+    print('Filtering review data...')
     reviews_df = read_review_data(filtered_businesses=business_df.business_id.unique())
     reviews_df.to_csv(file_names['toronto_reviews'], index=None)
 
@@ -147,11 +151,14 @@ if __name__ == '__main__':
     reviews_df.user_id = reviews_df.user_id.apply(lambda user_id: user_id if review_count[user_id] > 1 else None)
     reviews_df = reviews_df.dropna(subset=['user_id'])
 
-    # Save light version of reviews as csv -- to be uploaded on GitHub
+    # Save light version of reviews as csv for quick data loading
     reviews_df.drop('text', axis=1).to_csv(file_names['toronto_reviews_without_text'])
 
-    # Filter users active in Toronto
-    reviews_df = pd.read_csv(file_names['toronto_reviews_without_text'])
+    print('Filtering user data...')
     toronto_locals = dict.fromkeys(reviews_df.user_id.unique(), 1)
     user_df = read_user_data(filtered_users_dict=toronto_locals)
     user_df.to_csv(file_names['toronto_users'], index=None)
+
+
+if __name__ == '__main__':
+    subset_toronto_data()
