@@ -161,6 +161,8 @@ if __name__ == '__main__':
     # Filter businesses in Toronto
     business_df = read_business_data()
     business_df = business_df[business_df.city == 'Toronto']
+    business_df = business_df.dropna(subset=['categories'])
+    business_df = business_df[business_df.categories.str.contains('Restaurant')]
     business_df.to_csv(file_names['toronto_businesses'], index=None)
 
     # Filter reviews in Toronto -- Very lengthy
