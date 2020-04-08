@@ -5,9 +5,6 @@ import igraph
 from settings import file_names
 
 
-df = pd.read_json(file_names['review'], encoding='latin')
-
-
 def init_empty_lists(number_of_lists=4, list_length=100):
     for i in range(number_of_lists):
         yield [None] * list_length
@@ -40,15 +37,7 @@ def read_review_data(filtered_businesses):  # Todo implement filter here
     return ratings
 
 
-def read_checkin_data():
-    pass
-
-
-def read_tip_data():
-    pass
-
-
-def read_business_data(filter_by_city=None, save_to_csv=False):
+def read_business_data(save_to_csv=False):
     with open(file_names['business'], encoding='utf-8') as f:
         line_count = len(f.readlines())
 
@@ -86,9 +75,6 @@ def read_business_data(filter_by_city=None, save_to_csv=False):
         'attributes': attributes,
         'categories': categories
     })
-
-    if save_to_csv:
-        df.to_csv(file_names['business_csv'])
 
     return df
 
@@ -134,35 +120,22 @@ def read_photo_data():
     pass
 
 
-def make_friend_graph(save=True):
-    """
-    Currently does not run due to performance issues.
-    :param save:
-    :return:
-    """
-    ids, friend_ids = read_user_data()
-    for i in range(len(friend_ids)):
-        friend_ids[i] = filter(lambda friend_id: friend_id in ids, friend_ids[i].split(', '))
+def read_checkin_data():
+    pass
 
-    graph = igraph.Graph()
-    graph.add_vertices(ids)
-    for i, user_id in enumerate(ids):
-        if not i % 1000:
-            print('Adding edges for user {}/{}'.format(i, len(ids)))
-        graph.add_edges(((user_id, friend_id) for friend_id in friend_ids[i]))
 
-    if save:
-        graph.write_pickle(fname=file_names['user_graph'])
-
-    return graph
+def read_tip_data():
+    pass
 
 
 if __name__ == '__main__':
     # Filter businesses in Toronto
     business_df = read_business_data()
     business_df = business_df[business_df.city == 'Toronto']
-    business_df = business_df.dropna(subset=['categories'])
-    business_df = business_df[business_df.categories.str.contains('Restaurant')]
+
+    # UNCOMMENT TO FILTER DOWN TO RESTAURANTS ONLY
+    # business_df = business_df.dropna(subset=['categories'])
+    # business_df = business_df[business_df.categories.str.contains('Restaurant')]
     business_df.to_csv(file_names['toronto_businesses'], index=None)
 
     # Filter reviews in Toronto -- Very lengthy
