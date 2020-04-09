@@ -26,6 +26,7 @@ def make_friends_graph(library='networkx'):
         social_network.add_edges(chain.from_iterable(
                 df.apply(lambda row: get_friends_pairs(row['user_id'], row['friends']), axis=1).dropna())
         )
+        return social_network
     else:
         raise ValueError('Please use either "networkx" or "igraph" as library')
 
