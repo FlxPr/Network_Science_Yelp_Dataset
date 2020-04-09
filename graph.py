@@ -3,7 +3,6 @@ from settings import file_names
 import networkx as nx
 from itertools import chain
 
-
 def make_friends_graph():
     """
     :return: social network graph
