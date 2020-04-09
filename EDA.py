@@ -1,20 +1,17 @@
-import pandas as pd
-from tqdm import tqdm
-import json
-import igraph
 from settings import file_names
-import data_reader
 import matplotlib.pyplot as plt
-import seaborn as sns
 import graph
 import numpy as np
 from collections import Counter
-import networkx as nx
 import powerlaw
 import community
+import igraph
+import random
+import json
 
+random.seed(1)
 
-def plot_powerlaw_fit(node_degrees):
+def plot_powerlaw_fit(node_degrees, xlabel='Node degree', ylabel='Count'):
     powerlaw_fit = powerlaw.Fit(node_degrees)
 
     # Plot power law
@@ -35,15 +32,50 @@ def plot_powerlaw_fit(node_degrees):
     plt.show()
 
 
-def community_cumulative_plot(communities: dict):
+def louvain_community_cumulative_plot(communities: dict):
     community_counts = Counter(communities.values())
     community_counts = sorted(community_counts.values(), reverse=True)
     cumulative_community_counts = list(map(lambda x: x/sum(community_counts), np.cumsum(community_counts)))
     plt.plot(cumulative_community_counts)
-    plt.title('Cumulative community appartenance')
+    plt.title('Cumulative community membership for Louvain algorithm')
     plt.grid()
     plt.xlabel('Number of communities')
     plt.ylabel('Percentage of users represented')
+    plt.show()
+
+
+def run_louvain(social_net):
+    print('Running Louvain algorithm for community detection...')
+    communities = community.best_partition(social_net)
+    modularity = community.modularity(communities, social_net)
+    community_counts = Counter(communities.values())
+    print('Community structure modularity: {:.3f}'.format(modularity))
+    print('Number of communities: {}'.format(len(community_counts)))
+    louvain_community_cumulative_plot(communities)
+    return communities
+
+
+def run_infomap():
+    pass
+
+
+def plot_walktrap_community_detection(social_net, n_clusters_list=None):
+    walktrap = social_net.community_walktrap()
+
+    for n_clusters in range(1000, 10000, 1000) if n_clusters_list is None else n_clusters_list:
+        communities = walktrap.as_clustering(n_clusters)
+        community_counts = Counter(communities.membership)
+        community_counts = sorted(community_counts.values(), reverse=True)
+
+        cumulative_community_counts = list(map(lambda x: x / sum(community_counts), np.cumsum(community_counts)))
+        plt.plot(cumulative_community_counts, label=str(n_clusters))
+
+    plt.title('Cumulative community membership for Walktrap algorithm')
+    plt.grid()
+    plt.xlabel('Number of communities')
+    plt.ylabel('Percentage of users represented')
+    plt.ylim(0, 1)
+    plt.legend()
     plt.show()
 
 
@@ -59,10 +91,5 @@ if __name__ == '__main__':
     plot_powerlaw_fit(node_degrees)
 
     # Use louvain algorithm to maximize modularity in community detection
-    print('Running Louvain algorithm for community detection...')
-    communities = community.best_partition(social_net)
-    modularity = community.modularity(communities, social_net)
-    community_counts = Counter(communities.values())
-    print('Community structure modularity: {:.3f}'.format(modularity))
-    print('Number of communities: {}'.format(len(community_counts)))
-    community_cumulative_plot(communities)
+    communities = run_louvain(social_net)
+    json.dump(communities, open(file_names['community_partition'], 'w+'))

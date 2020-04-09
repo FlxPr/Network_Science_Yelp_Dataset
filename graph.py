@@ -4,6 +4,7 @@ import networkx as nx
 from itertools import chain
 import igraph
 
+
 def make_friends_graph(library: str = 'networkx'):
     """
     :return: social network graph
@@ -20,6 +21,7 @@ def make_friends_graph(library: str = 'networkx'):
             chain.from_iterable(df.apply(lambda row: get_friends_pairs(row['user_id'], row['friends']), axis=1).dropna())
         )
         return social_network
+
     elif library.lower() == 'igraph':
         social_network = igraph.Graph()
         social_network.add_vertices(df.user_id.unique())
@@ -37,7 +39,7 @@ def make_user_business_bipartite_graph(weighted=False, minimum_rating=4):
     :param minimum_rating: minimum rating to create user-business edge
     :return: user-business interaction graph
     """
-    if minimum_rating <= 5:
+    if minimum_rating > 5 and weighted:
         raise ValueError('Minimum rating must be less than 6')
 
     df = pd.read_csv(file_names['toronto_reviews_without_text'])

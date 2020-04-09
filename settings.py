@@ -11,5 +11,5 @@ file_names = {
     'toronto_reviews_without_text': 'Toronto_data/toronto_reviews_without_text.csv',
     'toronto_users': 'Toronto_data/toronto_users.csv',
     
-    'toronto_communities': 'Toronto_data/graph_results/communitites.json'
+    'community_partition': 'Toronto_data/communities/louvain.json'
 }
