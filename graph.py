@@ -2,8 +2,9 @@ import pandas as pd
 from settings import file_names
 import networkx as nx
 from itertools import chain
+import igraph
 
-def make_friends_graph():
+def make_friends_graph(library='networkx'):
     """
     :return: social network graph
     """
@@ -11,13 +12,22 @@ def make_friends_graph():
         return [(user_id, friend) for friend in friends.split(', ')] if type(friends) == str else None
 
     df = pd.read_csv(file_names['toronto_users'])
-    social_network = nx.Graph()
-    social_network.add_nodes_from(df.user_id.unique())
-    social_network.add_edges_from(
-        chain.from_iterable(df.apply(lambda row: get_friends_pairs(row['user_id'], row['friends']), axis=1).dropna())
-    )
-    return social_network
 
+    if library is 'networkx':
+        social_network = nx.Graph()
+        social_network.add_nodes_from(df.user_id.unique())
+        social_network.add_edges_from(
+            chain.from_iterable(df.apply(lambda row: get_friends_pairs(row['user_id'], row['friends']), axis=1).dropna())
+        )
+        return social_network
+    elif library is 'igraph':
+        social_network = igraph.Graph()
+        social_network.add_vertices(df.user_id.unique())
+        social_network.add_edges(chain.from_iterable(
+                df.apply(lambda row: get_friends_pairs(row['user_id'], row['friends']), axis=1).dropna())
+        )
+    else:
+        raise ValueError('Please use either "networkx" or "igraph" as library')
 
 def make_user_business_bipartite_graph(weighted=False, minimum_rating=4):
     """
