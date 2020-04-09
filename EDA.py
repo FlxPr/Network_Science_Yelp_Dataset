@@ -7,8 +7,10 @@ import data_reader
 import matplotlib.pyplot as plt
 import seaborn as sns
 import graph
+import numpy as np
 from collections import Counter
 import networkx as nx
+import powerlaw
 
 
 if __name__ == '__main__':
@@ -18,17 +20,25 @@ if __name__ == '__main__':
     print('Friend network: \nNumber of users: {n_users} \nNumber of friendships {n_friendships}'
           .format(n_friendships=n_friendships, n_users=n_users))
 
-    print('Number of friends')
-    friends_distribution = Counter((node_degree[1] for node_degree in social_net.degree))
-    print(friends_distribution)
-    alone_user_percentage = friends_distribution[0]/sum(friends_distribution.values())
-    print('{:.1f}% of the {} users have no friend link'.format(alone_user_percentage * 100, n_users))
+    # Fit a power-law to the data
+    node_degrees = [node_degree[1] for node_degree in social_net.degree]
+    powerlaw_fit = powerlaw.Fit(node_degrees)
 
-    # Analyze connected components
-    connected_components = list(nx.connected_components(social_net))
-    connected_components_sizes = Counter(map(len, connected_components))
-    print('Connected components sizes')
-    print(connected_components_sizes)
+    # Plot power law
+    friends_distribution = Counter(node_degrees)
+    fig, ax = plt.subplots()
+    ax.scatter(friends_distribution.keys(), friends_distribution.values())
+    props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+    ax.text(0.35, 0.95, 'Power law degree estimate: {:.2f}'.format(powerlaw_fit.power_law.alpha), transform=ax.transAxes, fontsize=14,
+            verticalalignment='top', bbox=props)
+    plt.title('Social network degree distribution')
+    plt.xlabel('Number of friends')
+    plt.ylabel('Count')
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.grid()
+    plt.show()
 
-    # Filter graph to largest connected component
-    social_net = social_net.subgraph(max(nx.connected_components(social_net), key=len))
+
+
+
