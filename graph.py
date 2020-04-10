@@ -3,6 +3,8 @@ from settings import file_names
 import networkx as nx
 from itertools import chain
 import igraph
+import numpy as np
+import itertools
 
 
 def make_friends_graph(library: str = 'networkx'):
@@ -53,8 +55,32 @@ def make_user_business_bipartite_graph(weighted=False, minimum_rating=4):
         review_network.add_weighted_edges_from([(user, business, rating) for user, business, rating
                                in zip(df.user_id, df.business_id, df.rating)])
     else:
-        review_network.add_edges_from([(user, business) for user, business, rating
+        review_network.add_edges_from([(user, business) for user, business
                                in zip(df.user_id, df.business_id)])
 
     return review_network
+
+
+def make_frienships_and_reviews_graph(weight_ratio=1, minimum_rating=0, library: str = 'networkx'):
+    """
+    :param weight_ratio: define the ratio of the weights of frienships over reviews. weight_ratio > 1 gives more importance to reviews. 
+    :return: user-user-business interaction graph
+    """
+    
+    network = make_friends_graph(library)
+    
+    if minimum_rating > 5 :
+        raise ValueError('Minimum rating must be less than 6')
+
+    df = pd.read_csv(file_names['toronto_reviews_without_text'])
+    df = df[df.rating >= minimum_rating]
+
+    network.add_nodes_from(df.business_id.unique())
+
+    network.add_weighted_edges_from([(user, business, rating) for user, business, rating
+                            in zip(df.user_id, df.business_id, itertools.repeat(weight_ratio))])
+    
+    
+    return network
+
 
