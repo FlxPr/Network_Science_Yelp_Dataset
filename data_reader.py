@@ -132,6 +132,7 @@ def read_checkin_data():
 
 
 def read_tip_data():
+    pd.read_json(file_names['tip'], encoding='utf-8')
     pass
 
 
