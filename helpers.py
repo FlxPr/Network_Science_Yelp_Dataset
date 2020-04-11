@@ -43,6 +43,8 @@ def make_community_business_matrices(communities: dict = None, date_threshold='2
 
     reviews_df = reviews_df.set_index('date').loc[:date_threshold]
     reviews_df['community'] = reviews_df.user_id.apply(lambda user: communities[user])
+    
+    
 def plot_dendrogram(G, partitions):
     '''Plot dendogram from output of Girven Newman community detection algorithm'''
     num_of_nodes = G.number_of_nodes()
