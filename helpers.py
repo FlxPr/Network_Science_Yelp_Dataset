@@ -5,7 +5,7 @@ import numpy as np
 from scipy.cluster import hierarchy
 from collections import defaultdict
 from collections import Counter
-
+import communities
 
 def split_train_validation_test(train_size: float = .7, validation_size: float = .15):
     assert train_size + validation_size < 1, 'Train and validation sizes must add up to less than 1'
@@ -44,32 +44,6 @@ def make_community_business_matrices(communities: dict = None, date_threshold='2
     reviews_df = reviews_df.set_index('date').loc[:date_threshold]
     reviews_df['community'] = reviews_df.user_id.apply(lambda user: communities[user])
     
-    
-def plot_dendrogram(G, partitions):
-    '''Plot dendogram from output of Girven Newman community detection algorithm'''
-    num_of_nodes = G.number_of_nodes()
-    dist = np.ones( shape=(num_of_nodes, num_of_nodes), dtype=np.float )*num_of_nodes
-    d = num_of_nodes-1
-    for partition in partitions:
-        for subset in partition:
-            for i in range(len(subset)):
-                for j in range(i+1, len(subset)):
-                    subsetl = list(subset)
-
-    community_counts = Counter(communities.values())
-
-    ratings = reviews_df.pivot_table(values='rating', aggfunc=np.mean, index='business_id',
-                                                        columns='community')
-    counts = reviews_df.pivot_table(values='rating', aggfunc=len, index='business_id',
-                                                        columns='community')
-    percentage_visited = counts.copy()
-    for community in community_counts.keys():
-        percentage_visited[community] = percentage_visited[community].apply(lambda count: count/community_counts[community])
-
-    return ratings, counts, percentage_visited
-
-
-
     Z = hierarchy.linkage(dist_list, 'complete')
     plt.figure()
     dn = hierarchy.dendrogram(Z)
@@ -102,3 +76,28 @@ def get_top_n(predictions, n=10):
         top_n[uid] = user_ratings[:n]
 
     return top_n
+
+
+def plot_dendrogram(G, partitions):
+
+    num_of_nodes = G.number_of_nodes()
+    dist = np.ones( shape=(num_of_nodes, num_of_nodes), dtype=np.float )*num_of_nodes
+    d = num_of_nodes-1
+    for partition in partitions:
+        for subset in partition:
+            for i in range(len(subset)):
+                for j in range(i+1, len(subset)):
+                    subsetl = list(subset)
+
+                    dist[int(subsetl[i]), int(subsetl[j])] = d
+                    dist[int(subsetl[j]), int(subsetl[i])] = d
+        d -= 1
+
+
+
+    dist_list = [dist[i,j] for i in range(num_of_nodes) for j in range(i+1, num_of_nodes)]
+
+
+    Z = hierarchy.linkage(dist_list, 'complete')
+    plt.figure()
+    dn = hierarchy.dendrogram(Z)
