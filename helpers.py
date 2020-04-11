@@ -2,6 +2,8 @@ import pandas as pd
 from settings import file_names
 import json
 import numpy as np
+from scipy.cluster import hierarchy
+from collections import defaultdict
 from collections import Counter
 
 
@@ -41,6 +43,16 @@ def make_community_business_matrices(communities: dict = None, date_threshold='2
 
     reviews_df = reviews_df.set_index('date').loc[:date_threshold]
     reviews_df['community'] = reviews_df.user_id.apply(lambda user: communities[user])
+def plot_dendrogram(G, partitions):
+    '''Plot dendogram from output of Girven Newman community detection algorithm'''
+    num_of_nodes = G.number_of_nodes()
+    dist = np.ones( shape=(num_of_nodes, num_of_nodes), dtype=np.float )*num_of_nodes
+    d = num_of_nodes-1
+    for partition in partitions:
+        for subset in partition:
+            for i in range(len(subset)):
+                for j in range(i+1, len(subset)):
+                    subsetl = list(subset)
 
     community_counts = Counter(communities.values())
 
@@ -55,3 +67,36 @@ def make_community_business_matrices(communities: dict = None, date_threshold='2
     return ratings, counts, percentage_visited
 
 
+
+    Z = hierarchy.linkage(dist_list, 'complete')
+    plt.figure()
+    dn = hierarchy.dendrogram(Z)
+    
+    
+    
+def get_top_n(predictions, n=10):
+    '''For the surprise recommender system library.
+    Return the top-N recommendation for each user from a set of predictions.
+
+    Args:
+        predictions(list of Prediction objects): The list of predictions, as
+            returned by the test method of an algorithm.
+        n(int): The number of recommendation to output for each user. Default
+            is 10.
+
+    Returns:
+    A dict where keys are user (raw) ids and values are lists of tuples:
+        [(raw item id, rating estimation), ...] of size n.
+    '''
+
+    # First map the predictions to each user.
+    top_n = defaultdict(list)
+    for uid, iid, true_r, est, _ in predictions:
+        top_n[uid].append((iid, est))
+
+    # Then sort the predictions for each user and retrieve the k highest ones.
+    for uid, user_ratings in top_n.items():
+        user_ratings.sort(key=lambda x: x[1], reverse=True)
+        top_n[uid] = user_ratings[:n]
+
+    return top_n
