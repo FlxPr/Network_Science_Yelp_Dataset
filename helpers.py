@@ -1,11 +1,11 @@
 import pandas as pd
 from settings import file_names
-import matplotlib.pyplot as plt
-import networkx as nx
+import json
 import numpy as np
-from scipy.cluster import hierarchy
+from collections import Counter
 
-def split_train_validation_test(train_size=.7, validation_size=.15):
+
+def split_train_validation_test(train_size: float = .7, validation_size: float = .15):
     assert train_size + validation_size < 1, 'Train and validation sizes must add up to less than 1'
 
     reviews = pd.read_csv(file_names['toronto_reviews_without_text'])
@@ -26,27 +26,32 @@ def split_train_validation_test(train_size=.7, validation_size=.15):
     return train_df, validation_df, test_df
 
 
+def make_community_business_matrices(communities: dict = None, date_threshold='2018-10-10'):
+    """
+    Creates community-business interaction matrices
+    :param communities: community split
+    :param date_threshold: considers reviews before this date threshold
+    :return: business mean rating per community, number of ratings per communities, percentage of visits per community
+    """
+    if communities is None:
+        communities = json.load(open(file_names['community_partition']))
 
-def plot_dendrogram(G, partitions):
+    reviews_df = pd.read_csv(file_names['toronto_reviews_without_text'])
+    reviews_df.date = pd.to_datetime(reviews_df.date)
 
-    num_of_nodes = G.number_of_nodes()
-    dist = np.ones( shape=(num_of_nodes, num_of_nodes), dtype=np.float )*num_of_nodes
-    d = num_of_nodes-1
-    for partition in partitions:
-        for subset in partition:
-            for i in range(len(subset)):
-                for j in range(i+1, len(subset)):
-                    subsetl = list(subset)
+    reviews_df = reviews_df.set_index('date').loc[:date_threshold]
+    reviews_df['community'] = reviews_df.user_id.apply(lambda user: communities[user])
 
-                    dist[int(subsetl[i]), int(subsetl[j])] = d
-                    dist[int(subsetl[j]), int(subsetl[i])] = d
-        d -= 1
+    community_counts = Counter(communities.values())
 
+    ratings = reviews_df.pivot_table(values='rating', aggfunc=np.mean, index='business_id',
+                                                        columns='community')
+    counts = reviews_df.pivot_table(values='rating', aggfunc=len, index='business_id',
+                                                        columns='community')
+    percentage_visited = counts.copy()
+    for community in community_counts.keys():
+        percentage_visited[community] = percentage_visited[community].apply(lambda count: count/community_counts[community])
 
-
-    dist_list = [dist[i,j] for i in range(num_of_nodes) for j in range(i+1, num_of_nodes)]
+    return ratings, counts, percentage_visited
 
 
-    Z = hierarchy.linkage(dist_list, 'complete')
-    plt.figure()
-    dn = hierarchy.dendrogram(Z)
