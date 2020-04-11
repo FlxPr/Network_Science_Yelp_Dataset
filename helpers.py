@@ -5,7 +5,6 @@ import numpy as np
 from scipy.cluster import hierarchy
 from collections import defaultdict
 from collections import Counter
-import communities
 
 def split_train_validation_test(train_size: float = .7, validation_size: float = .15):
     assert train_size + validation_size < 1, 'Train and validation sizes must add up to less than 1'
