@@ -3,10 +3,10 @@ from settings import file_names
 import json
 import numpy as np
 from scipy.cluster import hierarchy
-from collections import defaultdict
-from collections import Counter
+from collections import defaultdict, Counter
 from matplotlib import pyplot as plt
 from functools import reduce
+
 
 def split_train_validation_test(train_size: float = .7, validation_size: float = .15):
     assert train_size + validation_size < 1, 'Train and validation sizes must add up to less than 1'
@@ -29,17 +29,18 @@ def split_train_validation_test(train_size: float = .7, validation_size: float =
     return train_df, validation_df, test_df
 
 
-def make_community_business_matrices(communities: dict = None, date_threshold: str = '2018-10-10'):
+def make_community_business_matrices(reviews_df: pd.DataFrame, communities: dict = None,
+                                     date_threshold: str = '2018-10-10'):
     """
     Creates community-business interaction matrices
     :param communities: community split
-    :param date_threshold: considers reviews before this date threshold
+    :param date_threshold: only considers reviews before this date threshold
     :return: business mean rating per community, number of ratings per communities, percentage of visits per community
     """
     if communities is None:
         communities = json.load(open(file_names['community_partition']))
 
-    reviews_df = pd.read_csv(file_names['toronto_reviews_without_text'])
+    reviews_df = reviews_df.copy()
     reviews_df.date = pd.to_datetime(reviews_df.date)
 
     reviews_df = reviews_df.set_index('date').loc[:date_threshold]
@@ -56,30 +57,67 @@ def make_community_business_matrices(communities: dict = None, date_threshold: s
         visit_percentage[community] = visit_percentage[community].apply(lambda count: count/community_counts[community])
 
     visit_counts['all_dataset'] = visit_counts.apply(lambda row: np.sum(row), axis=1)
-    mean_ratings['all_dataset'] = reduce(pd.Series.add, [visit_counts[community].fillna(0)*mean_ratings[community].fillna(0) for community in community_counts.keys()])/visit_counts['all_dataset']
     visit_percentage['all_dataset'] = visit_counts['all_dataset']/np.sum(list(community_counts.values()))
+    mean_ratings['all_dataset'] = reduce(pd.Series.add, [visit_counts[community].fillna(0) *
+                                                         mean_ratings[community].fillna(0)
+                                                         for community in community_counts.keys()])\
+                                  /visit_counts['all_dataset']
 
     return mean_ratings, visit_counts, visit_percentage
 
 
-def _assign_mean_rating(row, communities, user_column, business_column, min_community_size, min_community_visitors):
-    pass
-
-
-def compute_community_related_columns(df: pd.DataFrame, communities: dict=None, user_column: str = 'user_id',
-                                         business_column: str = 'business_id', date_threshold: str= '2018-10-10',
-                                         min_community_size: int = 10, min_community_visitors=30):
+def compute_community_related_columns(reviews_df: pd.DataFrame, communities: dict = None, user_column: str = 'user_id',
+                                      business_column: str = 'business_id', date_threshold: str = '2018-10-10',
+                                      min_community_size: int = 10, min_community_visitors=10):
+    """
+    Computes statistics for every review based on the reviewer's community
+    :param df: reviews dataframe
+    :param communities: community split, dictionary-like in the format {user_id: community_id}
+    :param user_column: name of the user_id column in df
+    :param business_column: name of the business_id column in df
+    :param date_threshold: considers reviews only before that threshold
+    :param min_community_size: minimum member count in community to compute statistics. Communities with less than this
+     member count will be assigned statistics computed on the whole dataset
+    :param min_community_visitors: minimum of reviews for a given restaurant per community to compute community
+    statistics. Reviews with less than this threshold will be assigned statistics computed on the whole dataset.
+    :return: df with 3 new columns: community of the user,
+                                    mean rating of the user's community for the reviewed restaurant
+                                    percentage of the user's community members that gave a review to this restaurant
+             the columns will contain NaN values for restaurants that have no review before the date threshold
+    """
     if communities is None:
         communities = json.load(open(file_names['community_partition']))
 
-    df = df.copy()
-    ratings, counts, percentage_visited = make_community_business_matrices(communities, date_threshold)
+    community_counts = Counter(communities.values())
+    filtered_communities = {community: 1 for community in community_counts.keys()
+                            if community_counts[community] >= min_community_size}
 
-    df['community_mean_rating'] = df.apply(lambda row: ratings.loc[row[business_column], communities[row[user_column]]],
-                                           axis=1)
-    df['community_percentage_of_visits'] = df.apply(lambda row: percentage_visited.loc[row[business_column], communities[row[user_column]]],
-                                           axis=1)
+    reviews_df = reviews_df.copy()
+    ratings, counts, percentage_visited = make_community_business_matrices(reviews_df, communities, date_threshold)
 
+    filtered_businesses = {business_id: 1 for business_id in ratings.index}
+
+    reviews_df['community'] = reviews_df[user_column].apply(lambda user_id: communities[user_id])
+    reviews_df['community_mean_rating'] = reviews_df.apply(
+        lambda review:  None if not filtered_businesses.get(review[business_column])
+        else(
+            ratings.loc[review[business_column], review['community']]
+            if filtered_communities.get(review['community'])
+            and counts.loc[review[business_column], review['community']] >= min_community_visitors
+            else (ratings.loc[review[business_column], 'all_dataset'])
+        ), axis=1
+    )
+    reviews_df['community_percentage_of_visits'] = reviews_df.apply(
+        lambda review: None if not filtered_businesses.get(review[business_column])
+        else (
+            percentage_visited.loc[review[business_column], review['community']]
+            if filtered_communities.get(review['community'])
+               and counts.loc[review[business_column], review['community']] >= min_community_visitors
+            else percentage_visited.loc[review[business_column], 'all_dataset']
+        ), axis=1
+    )
+
+    return reviews_df
 
 
 def get_top_n(predictions, n=10):
@@ -126,3 +164,10 @@ def plot_dendrogram(G, partitions):
     Z = hierarchy.linkage(dist_list, 'complete')
     plt.figure()
     dn = hierarchy.dendrogram(Z)
+
+
+if __name__ == '__main__':
+    reviews_df = pd.read_csv(file_names['toronto_reviews_without_text'])
+    reviews_df = compute_community_related_columns(reviews_df)
+    print('Result of the computing of comunity-based features:')
+    print(reviews_df.head(5))
