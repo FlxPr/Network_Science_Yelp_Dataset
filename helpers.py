@@ -58,7 +58,7 @@ def make_community_business_matrices(reviews_df: pd.DataFrame, communities: dict
 
 
 def compute_community_related_features(reviews_df: pd.DataFrame, communities: list = None, user_column: str = 'user_id',
-                                       business_column: str = 'business_id', date_threshold: str = '2018-10-10',
+                                       business_column: str = 'business_id', date_threshold: str = split_dates['train']['end'],
                                        min_community_size: int = 10, min_community_visitors=10):
     """
     Computes statistics for every review based on the reviewer's community
