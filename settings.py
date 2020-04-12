@@ -13,3 +13,9 @@ file_names = {
     
     'community_partition': 'Toronto_data/communities/louvain.json'
 }
+
+split_dates = {
+    'train': '2017-01-04',
+    'validation': '2017-11-28',
+    'test': '2019-01-01'
+}
