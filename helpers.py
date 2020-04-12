@@ -89,22 +89,24 @@ def compute_community_related_features(reviews_df: pd.DataFrame, communities: li
         community_counts = Counter(community.values())
         filtered_communities = {community: 1 for community in community_counts.keys()
                                 if community_counts[community] >= min_community_size}
-        reviews_df['community_{}'.format(i)] = reviews_df[user_column].apply(lambda user_id: community[user_id])
+
+        community_name = 'community_{}'.format(i + 1)
+        reviews_df[community_name] = reviews_df[user_column].apply(lambda user_id: community[user_id])
         reviews_df['community_{}_mean_rating'.format(i)] = reviews_df.apply(
             lambda review: None if not filtered_businesses.get(review[business_column])
             else(
-                ratings.loc[review[business_column], review['community_{}'.format(i)]]
-                if filtered_communities.get(review['community_{}'.format(i)])
-                and counts.loc[review[business_column], review['community_{}'.format(i)]] >= min_community_visitors
+                ratings.loc[review[business_column], review[community_name]]
+                if filtered_communities.get(review[community_name])
+                and counts.loc[review[business_column], review[community_name]] >= min_community_visitors
                 else (ratings.loc[review[business_column], 'all_dataset'])
             ), axis=1
         )
         reviews_df['community_{}_percentage_of_visits'.format(i)] = reviews_df.apply(
             lambda review: None if not filtered_businesses.get(review[business_column])
             else (
-                percentage_visited.loc[review[business_column], review['community_{}'.format(i)]]
-                if filtered_communities.get(review['community_{}'.format(i)])
-                   and counts.loc[review[business_column], review['community_{}'.format(i)]] >= min_community_visitors
+                percentage_visited.loc[review[business_column], review[community_name]]
+                if filtered_communities.get(review[community_name])
+                   and counts.loc[review[business_column], review[community_name]] >= min_community_visitors
                 else percentage_visited.loc[review[business_column], 'all_dataset']
             ), axis=1
         )
