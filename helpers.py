@@ -166,6 +166,25 @@ def plot_dendrogram(G, partitions):
     Z = hierarchy.linkage(dist_list, 'complete')
     plt.figure()
     dn = hierarchy.dendrogram(Z)
+    
+    
+    
+def assign_communities(communities, df_user_id, method_name, G):
+    # Create a new df
+    df = df_user_id.copy()
+    
+    # Create a new column for communities
+    df[method_name] = 0
+    
+    for i, com in enumerate(communities):
+        
+        # Get node indices
+        com = G.vs[com]['name']
+        
+        mask = df['user_id'].isin(com)
+        df.loc[mask, method_name] = i 
+        
+    return df
 
 
 if __name__ == '__main__':
