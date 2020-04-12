@@ -6,7 +6,7 @@ from scipy.cluster import hierarchy
 from collections import defaultdict
 from collections import Counter
 from matplotlib import pyplot as plt
-
+from functools import reduce
 
 def split_train_validation_test(train_size: float = .7, validation_size: float = .15):
     assert train_size + validation_size < 1, 'Train and validation sizes must add up to less than 1'
@@ -55,6 +55,10 @@ def make_community_business_matrices(communities: dict = None, date_threshold: s
     for community in community_counts.keys():
         visit_percentage[community] = visit_percentage[community].apply(lambda count: count/community_counts[community])
 
+    visit_counts['all_dataset'] = visit_counts.apply(lambda row: np.sum(row), axis=1)
+    mean_ratings['all_dataset'] = reduce(pd.Series.add, [visit_counts[community].fillna(0)*mean_ratings[community].fillna(0) for community in community_counts.keys()])/visit_counts['all_dataset']
+    visit_percentage['all_dataset'] = visit_counts['all_dataset']/np.sum(list(community_counts.values()))
+
     return mean_ratings, visit_counts, visit_percentage
 
 
@@ -75,6 +79,7 @@ def compute_community_related_columns(df: pd.DataFrame, communities: dict=None, 
                                            axis=1)
     df['community_percentage_of_visits'] = df.apply(lambda row: percentage_visited.loc[row[business_column], communities[row[user_column]]],
                                            axis=1)
+
 
 
 def get_top_n(predictions, n=10):
