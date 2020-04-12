@@ -1,5 +1,5 @@
 import pandas as pd
-from settings import file_names
+from settings import file_names, split_dates
 import networkx as nx
 from itertools import chain
 import igraph
@@ -35,7 +35,7 @@ def make_friends_graph(library: str = 'networkx'):
         raise ValueError('Please use either "networkx" or "igraph" as library')
 
 
-def make_user_business_bipartite_graph(weighted=False, minimum_rating=4, igraph_=False):
+def make_user_business_bipartite_graph(weighted=False, minimum_rating=4, igraph_=False, train_=False):
     """
     :param weighted: assign rating as user-business edge weight
     :param minimum_rating: minimum rating to create user-business edge
@@ -52,9 +52,14 @@ def make_user_business_bipartite_graph(weighted=False, minimum_rating=4, igraph_
     review_network.add_nodes_from(df.user_id.unique(), bipartite=0)
     review_network.add_nodes_from(df.business_id.unique(), bipartite=1)
 
+    
     if weighted:
-        review_network.add_weighted_edges_from([(user, business, rating) for user, business, rating
-                               in zip(df.user_id, df.business_id, df.rating)])
+        if train_:
+            review_network.add_weighted_edges_from([(user, business, rating) for user, business, rating, date
+                                   in zip(df.user_id, df.business_id, df.rating, df.date) with date < split_dates['train']['end']])
+        else:
+            review_network.add_weighted_edges_from([(user, business, rating) for user, business, rating
+                                   in zip(df.user_id, df.business_id, df.rating)])
     else:
         review_network.add_edges_from([(user, business) for user, business
                                in zip(df.user_id, df.business_id)])
