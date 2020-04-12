@@ -10,11 +10,11 @@ from functools import reduce
 
 def split_train_validation_test(reviews_df: pd.DataFrame = None, date_column: str = 'date'):
     """
-    Splits
+    Splits review data into train, test and validation
     :param reviews_df: data frame containing reviews and a date column
     :return:
     """
-    if reviews_df is None: # Use default reviews data frame
+    if reviews_df is None:  # Use default reviews data frame
         reviews_df = pd.read_csv(file_names['toronto_reviews_without_text'])
 
     reviews_df = reviews_df.copy()
@@ -51,11 +51,16 @@ def make_community_business_matrices(reviews_df: pd.DataFrame, communities: dict
                                                         columns='community')
     visit_counts = reviews_df.pivot_table(values='rating', aggfunc=len, index='business_id',
                                                         columns='community')
+
     visit_percentage = visit_counts.copy()
     for community in community_counts.keys():
+        if community not in mean_ratings.columns: # Make sure community columns are present even for absent communities
+            mean_ratings[community] = pd.Series()
+            visit_counts[community] = pd.Series()
+            visit_percentage[community] = pd.Series()
         visit_percentage[community] = visit_percentage[community].apply(lambda count: count/community_counts[community])
 
-    visit_counts['all_dataset'] = visit_counts.apply(lambda row: np.sum(row), axis=1)
+    visit_counts['all_dataset'] = visit_counts.sum(skipna=True)
     visit_percentage['all_dataset'] = visit_counts['all_dataset']/np.sum(list(community_counts.values()))
     mean_ratings['all_dataset'] = reduce(pd.Series.add, [visit_counts[community].fillna(0) *
                                                          mean_ratings[community].fillna(0)
@@ -70,7 +75,9 @@ def compute_community_related_features(reviews_df: pd.DataFrame, communities: li
                                        min_community_size: int = 10, min_community_visitors=10):
     """
     Computes statistics for every review based on the reviewer's community
-    :param reviews_df: reviews dataframe
+    The DataFrame will contain NaN values for restaurants that have no review before the date threshold
+
+    :param reviews_df: pandas dataframe containing reviews
     :param communities: community splits, list of dictionary-like objects in the format {user_id: community_id}
     :param user_column: name of the user_id column in df
     :param business_column: name of the business_id column in df
@@ -83,7 +90,7 @@ def compute_community_related_features(reviews_df: pd.DataFrame, communities: li
     community of the user giving the review
     mean rating of the user's community for the reviewed restaurant
     percentage of the user's community members that gave a review to this restaurant
-    The DataFrame will contain NaN values for restaurants that have no review before the date threshold
+
     """
     reviews_df = reviews_df.copy()
 
