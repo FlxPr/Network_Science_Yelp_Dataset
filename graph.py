@@ -3,7 +3,6 @@ from settings import file_names
 import networkx as nx
 from itertools import chain
 import igraph
-import numpy as np
 import itertools
 import os
 

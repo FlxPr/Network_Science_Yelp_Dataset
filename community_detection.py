@@ -5,7 +5,6 @@ import numpy as np
 from collections import Counter
 import powerlaw
 import community
-import igraph
 import random
 import json
 

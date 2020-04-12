@@ -8,14 +8,22 @@ from matplotlib import pyplot as plt
 from functools import reduce
 
 
-def split_train_validation_test(reviews_df):
+def split_train_validation_test(reviews_df: pd.DataFrame = None, date_column: str = 'date'):
+    """
+    Splits
+    :param reviews_df: data frame containing reviews and a date column
+    :return:
+    """
+    if reviews_df is None: # Use default reviews data frame
+        reviews_df = pd.read_csv(file_names['toronto_reviews_without_text'])
+
     reviews_df = reviews_df.copy()
-    reviews_df.date = pd.to_datetime(reviews_df.date)
-    reviews_df = reviews_df.set_index('date').sort_index()
+    reviews_df[date_column] = pd.to_datetime(reviews_df[date_column])
+    reviews_df = reviews_df.set_index(date_column).sort_index()
 
     train_df = reviews_df.loc[:split_dates['train']['end']]
-    validation_df = reviews_df.iloc[split_dates['validation']['begin']:split_dates['validation']['end']]
-    test_df = reviews_df.iloc[split_dates['test']['begin']:split_dates['test']['end']]
+    validation_df = reviews_df.loc[split_dates['validation']['begin']:split_dates['validation']['end']]
+    test_df = reviews_df.loc[split_dates['test']['begin']:split_dates['test']['end']]
 
     return train_df, validation_df, test_df
 
