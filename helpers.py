@@ -2,7 +2,10 @@ import pandas as pd
 from settings import file_names
 import json
 import numpy as np
+from scipy.cluster import hierarchy
+from collections import defaultdict
 from collections import Counter
+from matplotlib import pyplot as plt
 
 
 def split_train_validation_test(train_size: float = .7, validation_size: float = .15):
@@ -74,4 +77,47 @@ def compute_community_related_columns(df: pd.DataFrame, communities: dict=None, 
                                            axis=1)
 
 
+def get_top_n(predictions, n=10):
+    '''For the surprise recommender system library.
+    Return the top-N recommendation for each user from a set of predictions.
+    Args:
+        predictions(list of Prediction objects): The list of predictions, as
+            returned by the test method of an algorithm.
+        n(int): The number of recommendation to output for each user. Default
+            is 10.
+    Returns:
+    A dict where keys are user (raw) ids and values are lists of tuples:
+        [(raw item id, rating estimation), ...] of size n.
+    '''
 
+    # First map the predictions to each user.
+    top_n = defaultdict(list)
+    for uid, iid, true_r, est, _ in predictions:
+        top_n[uid].append((iid, est))
+
+    # Then sort the predictions for each user and retrieve the k highest ones.
+    for uid, user_ratings in top_n.items():
+        user_ratings.sort(key=lambda x: x[1], reverse=True)
+        top_n[uid] = user_ratings[:n]
+
+    return top_n
+
+
+def plot_dendrogram(G, partitions):
+    num_of_nodes = G.number_of_nodes()
+    dist = np.ones(shape=(num_of_nodes, num_of_nodes), dtype=np.float) * num_of_nodes
+    d = num_of_nodes - 1
+    for partition in partitions:
+        for subset in partition:
+            for i in range(len(subset)):
+                for j in range(i + 1, len(subset)):
+                    subsetl = list(subset)
+
+                    dist[int(subsetl[i]), int(subsetl[j])] = d
+                    dist[int(subsetl[j]), int(subsetl[i])] = d
+        d -= 1
+
+    dist_list = [dist[i, j] for i in range(num_of_nodes) for j in range(i + 1, num_of_nodes)]
+    Z = hierarchy.linkage(dist_list, 'complete')
+    plt.figure()
+    dn = hierarchy.dendrogram(Z)
