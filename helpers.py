@@ -1,5 +1,5 @@
 import pandas as pd
-from settings import file_names
+from settings import file_names, split_dates
 import json
 import numpy as np
 from scipy.cluster import hierarchy
@@ -8,29 +8,14 @@ from matplotlib import pyplot as plt
 from functools import reduce
 
 
-def split_train_validation_test(reviews_df, train_size: float = .7, validation_size: float = .15):
-    """
-
-    :param train_size:
-    :param validation_size:
-    :return:
-    """
-    assert train_size + validation_size < 1, 'Train and validation sizes must add up to less than 1'
-
+def split_train_validation_test(reviews_df):
     reviews_df = reviews_df.copy()
     reviews_df.date = pd.to_datetime(reviews_df.date)
     reviews_df = reviews_df.set_index('date').sort_index()
 
-    train_validation_split = int(len(reviews_df.index) * train_size)
-
-    if validation_size != 0:
-        validation_test_split = int(len(reviews_df.index) * (train_size + validation_size))
-    else:
-        validation_test_split = train_validation_split + 1
-
-    train_df = reviews_df.iloc[:train_validation_split]
-    validation_df = reviews_df.iloc[train_validation_split:validation_test_split]
-    test_df = reviews_df.iloc[validation_test_split:]
+    train_df = reviews_df.loc[:split_dates['train']['end']]
+    validation_df = reviews_df.iloc[split_dates['validation']['begin']:split_dates['validation']['end']]
+    test_df = reviews_df.iloc[split_dates['test']['begin']:split_dates['test']['end']]
 
     return train_df, validation_df, test_df
 

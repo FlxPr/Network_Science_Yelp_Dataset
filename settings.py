@@ -15,7 +15,7 @@ file_names = {
 }
 
 split_dates = {
-    'train': '2017-01-04',
-    'validation': '2017-11-28',
-    'test': '2019-01-01'
+    'train': {'begin': '2000-01-01', 'end': '2017-01-05'},
+    'validation': {'begin': '2017-01-05', 'end': '2017-11-29'},
+    'test': {'begin': '2017-11-29', 'end': '2050-01-01'}
 }
