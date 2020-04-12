@@ -35,7 +35,7 @@ def make_friends_graph(library: str = 'networkx'):
         raise ValueError('Please use either "networkx" or "igraph" as library')
 
 
-def make_user_business_bipartite_graph(weighted=False, minimum_rating=4, igraph_=False, train_=False):
+def make_user_business_bipartite_graph(weighted=False, minimum_rating=4, igraph_=False, mode='full'):
     """
     :param weighted: assign rating as user-business edge weight
     :param minimum_rating: minimum rating to create user-business edge
@@ -54,15 +54,33 @@ def make_user_business_bipartite_graph(weighted=False, minimum_rating=4, igraph_
 
     
     if weighted:
-        if train_:
+        if mode.lower() == 'train':
             review_network.add_weighted_edges_from([(user, business, rating) for user, business, rating, date
-                                   in zip(df.user_id, df.business_id, df.rating, df.date) with date < split_dates['train']['end']])
-        else:
+                                   in zip(df.user_id, df.business_id, df.rating, df.date) if date < split_dates['train']['end']])
+        elif mode.lower() == 'test':
+            review_network.add_weighted_edges_from([(user, business, rating) for user, business, rating, date
+                                   in zip(df.user_id, df.business_id, df.rating, df.date) if ((date > split_dates['test']['begin']) & (date < split_dates['test']['end']))])
+        elif mode.lower() == 'validation':
+            review_network.add_weighted_edges_from([(user, business, rating) for user, business, rating, date
+                                   in zip(
+                                       df.user_id, df.business_id, df.rating, df.date) if ((date > split_dates['validation']['begin']) & (date < split_dates['validation']['end']))])
+        elif mode.lower() == 'full':
             review_network.add_weighted_edges_from([(user, business, rating) for user, business, rating
                                    in zip(df.user_id, df.business_id, df.rating)])
     else:
-        review_network.add_edges_from([(user, business) for user, business
-                               in zip(df.user_id, df.business_id)])
+        if mode.lower() == 'train':
+            review_network.add_edges_from([(user, business) for user, business, date
+                                   in zip(df.user_id, df.business_id, df.date) if date < split_dates['train']['end']])
+        elif mode.lower() == 'test':
+            review_network.add_edges_from([(user, business) for user, business, date
+                                   in zip(df.user_id, df.business_id, df.date) if ((date > split_dates['test']['begin']) & (date < split_dates['test']['end']))])
+        elif mode.lower() == 'validation':
+            review_network.add_edges_from([(user, business) for user, business, date
+                                   in zip(
+                                       df.user_id, df.business_id, df.date) if ((date > split_dates['validation']['begin']) & (date < split_dates['validation']['end']))])
+        elif mode.lower() == 'full':
+            review_network.add_edges_from([(user, business) for user, business
+                                   in zip(df.user_id, df.business_id)])
 
     if igraph_:
 
