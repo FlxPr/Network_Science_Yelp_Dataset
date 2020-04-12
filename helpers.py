@@ -71,9 +71,11 @@ def compute_community_related_features(reviews_df: pd.DataFrame, communities: li
      member count will be assigned statistics computed on the whole dataset
     :param min_community_visitors: minimum of reviews for a given restaurant per community to compute community
     statistics. Reviews with less than this threshold will be assigned statistics computed on the whole dataset.
-    :return: 2 Pandas Series: mean rating of the user's community for the reviewed restaurant
-                              percentage of the user's community members that gave a review to this restaurant
-             the Series will contain NaN values for restaurants that have no review before the date threshold
+    :return: review_df with new columns, for each community split:
+    community of the user giving the review
+    mean rating of the user's community for the reviewed restaurant
+    percentage of the user's community members that gave a review to this restaurant
+    The DataFrame will contain NaN values for restaurants that have no review before the date threshold
     """
     reviews_df = reviews_df.copy()
 
