@@ -43,6 +43,7 @@ def make_community_business_matrices(reviews_df: pd.DataFrame, communities: dict
     reviews_df.date = pd.to_datetime(reviews_df.date)
 
     reviews_df = reviews_df.set_index('date').loc[:date_threshold]
+    print(type(reviews_df))
     reviews_df['community'] = reviews_df.user_id.apply(lambda user: communities[user])
 
     community_counts = Counter(communities.values())
@@ -154,29 +155,8 @@ def get_top_n(predictions, n=10):
 
     return top_n
 
-
-def plot_dendrogram(G, partitions):
-    num_of_nodes = G.number_of_nodes()
-    dist = np.ones(shape=(num_of_nodes, num_of_nodes), dtype=np.float) * num_of_nodes
-    d = num_of_nodes - 1
-    for partition in partitions:
-        for subset in partition:
-            for i in range(len(subset)):
-                for j in range(i + 1, len(subset)):
-                    subsetl = list(subset)
-
-                    dist[int(subsetl[i]), int(subsetl[j])] = d
-                    dist[int(subsetl[j]), int(subsetl[i])] = d
-        d -= 1
-
-    dist_list = [dist[i, j] for i in range(num_of_nodes) for j in range(i + 1, num_of_nodes)]
-    Z = hierarchy.linkage(dist_list, 'complete')
-    plt.figure()
-    dn = hierarchy.dendrogram(Z)
     
-    
-    
-def assign_communities(communities, df_user_id, method_name, G):
+def assign_communities(communities, df_user_id, method_name, G, attribute_name = 'name'):
     # Create a new df
     df = df_user_id.copy()
     
@@ -186,7 +166,7 @@ def assign_communities(communities, df_user_id, method_name, G):
     for i, com in enumerate(communities):
         
         # Get node indices
-        com = G.vs[com]['name']
+        com = G.vs[com][attribute_name]
         
         mask = df['user_id'].isin(com)
         df.loc[mask, method_name] = i 
