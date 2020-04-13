@@ -35,10 +35,13 @@ def make_friends_graph(library: str = 'networkx'):
         raise ValueError('Please use either "networkx" or "igraph" as library')
 
 
-def make_user_business_bipartite_graph(weighted=False, minimum_rating=4, igraph_=False, mode='full'):
+def make_user_business_bipartite_graph(weighted=False, minimum_rating=4, igraph_=False, mode='full', bipartite=True):
     """
     :param weighted: assign rating as user-business edge weight
     :param minimum_rating: minimum rating to create user-business edge
+    :param _igraph: Set to true to have graph in igraph library. Default: networkx library.
+    :param mode: Choose in['train', 'test', 'validation', 'full']. Build graph accordingly, spliting accrdingly to review dates as defined in settings.py
+    :param bipartite: this argument is just an helper for the function make_frienships_and_reviews_graph.
     :return: user-business interaction graph
     """
     if minimum_rating > 5 and weighted:
@@ -47,11 +50,14 @@ def make_user_business_bipartite_graph(weighted=False, minimum_rating=4, igraph_
     df = pd.read_csv(file_names['toronto_reviews_without_text'])
     df = df[df.rating >= minimum_rating]
     
-
-    review_network = nx.Graph()
-    review_network.add_nodes_from(df.user_id.unique(), bipartite=0)
-    review_network.add_nodes_from(df.business_id.unique(), bipartite=1)
-
+    if bipartite:
+        review_network = nx.Graph()
+        review_network.add_nodes_from(df.user_id.unique(), bipartite=0)
+        review_network.add_nodes_from(df.business_id.unique(), bipartite=1)
+    else:
+        review_network = nx.Graph()
+        review_network.add_nodes_from(df.user_id.unique())
+        review_network.add_nodes_from(df.business_id.unique())
     
     if weighted:
         if mode.lower() == 'train':
@@ -91,7 +97,7 @@ def make_user_business_bipartite_graph(weighted=False, minimum_rating=4, igraph_
     return review_network
 
 
-def make_frienships_and_reviews_graph(weight_ratio=1, minimum_rating=0, igraph_=False):
+def make_frienships_and_reviews_graph(weight_ratio=1, minimum_rating=0, igraph_=False, mode='full'):
     """
     :param weight_ratio: define the ratio of the weights of frienships over reviews. weight_ratio > 1 gives more importance to reviews. 
     :param minimum_rating: minimum rating to create user-business edge
@@ -100,6 +106,10 @@ def make_frienships_and_reviews_graph(weight_ratio=1, minimum_rating=0, igraph_=
     """
 
     network = make_friends_graph('networkx')
+    for e in network.edges():
+        network[e[0]][e[1]]['weight'] = 1
+        
+    network_bipartite = make_user_business_bipartite_graph(weighted=False, minimum_rating=minimum_rating, igraph_=False, mode=mode, bipartite=False)
     
     if minimum_rating > 5 :
         raise ValueError('Minimum rating must be less than 6')
@@ -108,9 +118,11 @@ def make_frienships_and_reviews_graph(weight_ratio=1, minimum_rating=0, igraph_=
     df = df[df.rating >= minimum_rating]
 
     network.add_nodes_from(df.business_id.unique())
-
-    network.add_weighted_edges_from([(user, business, rating) for user, business, rating
-                            in zip(df.user_id, df.business_id, itertools.repeat(weight_ratio))])
+    
+    network.add_weighted_edges_from([(user_id, business_id, weight_ratio) for user_id, business_id in list(network_bipartite.edges())])
+    
+    #network.add_weighted_edges_from([(user, business, rating) for user, business, rating
+    #                        in zip(df.user_id, df.business_id, itertools.repeat(weight_ratio))])
     
     if igraph_:
 
