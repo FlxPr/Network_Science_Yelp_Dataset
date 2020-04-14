@@ -6,6 +6,8 @@ from scipy.cluster import hierarchy
 from collections import defaultdict, Counter
 from matplotlib import pyplot as plt
 from functools import reduce
+import networkx as nx
+from networkx.algorithms import bipartite
 
 
 def split_train_validation_test(reviews_df: pd.DataFrame = None, date_column: str = 'date'):
