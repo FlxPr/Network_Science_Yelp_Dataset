@@ -156,20 +156,20 @@ def get_top_n(predictions, n=10):
     return top_n
 
     
-def assign_communities(communities, df_user_id, method_name, G, attribute_name = 'name'):
+def assign_communities(communities, df_id, method_name, G, attribute_name = 'name', node_type = 'user'):
     # Create a new df
-    df = df_user_id.copy()
+    df = df_id.copy()
     
     # Create a new column for communities
-    df[method_name] = 0
+    df['{}_{}'.format(node_type,method_name)] = 0
     
     for i, com in enumerate(communities):
         
         # Get node indices
         com = G.vs[com][attribute_name]
         
-        mask = df['user_id'].isin(com)
-        df.loc[mask, method_name] = i 
+        mask = df['{}_id'.format(node_type)].isin(com)
+        df.loc[mask, '{}_{}'.format(node_type,method_name)] = i 
         
     return df
 
