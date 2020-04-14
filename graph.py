@@ -126,23 +126,36 @@ def make_user_business_bipartite_graph_random_split(weighted=False, minimum_rati
         
         edges = [(user, business, rating) for user, business, rating, date
                                    in zip(df.user_id, df.business_id, df.rating, df.date)]
+        random.seed(1)
+        random.shuffle(edges)
+        edges_test = edges[:round(len(edges)*0.2)]
+        edges_train = edges[round(len(edges)*0.2):]
+        
+        if mode.lower() == 'train':
+            review_network.add_weighted_edges_from(edges_train)
+        elif mode.lower() == 'test':
+            review_network.add_weighted_edges_from(edges_test)
+        elif mode.lower() == 'full':
+            review_network.add_weighted_edges_from(edges)
+        else:
+            raise ValueError('pass "full", "train" or "test" as mode')
         
     else:
         edges = [(user, business) for user, business, date in zip(df.user_id, df.business_id, df.date)]
-
-
-    random.seed(1)
-    edges_train = random.sample(edges, round(len(edges)*0.8))
-    edges_test = [edge for edge in edges if edge not in edges_train]
-
-    if mode.lower() == 'train':
-        review_network.add_weighted_edges_from(edges_train)
-    elif mode.lower() == 'test':
-        review_network.add_weighted_edges_from(edges_test)
-    elif mode.lower() == 'full':
-        review_network.add_weighted_edges_from(edges)
-    else:
-        raise ValueError('pass "full", "train" or "test" as mode')
+        
+        random.seed(1)
+        random.shuffle(edges)
+        edges_test = edges[:round(len(edges)*0.2)]
+        edges_train = edges[round(len(edges)*0.2):]
+        
+        if mode.lower() == 'train':
+            review_network.add_edges_from(edges_train)
+        elif mode.lower() == 'test':
+            review_network.add_edges_from(edges_test)
+        elif mode.lower() == 'full':
+            review_network.add_edges_from(edges)
+        else:
+            raise ValueError('pass "full", "train" or "test" as mode')
     
     if igraph_:
 

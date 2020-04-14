@@ -176,7 +176,7 @@ def assign_communities(communities, df_id, method_name, G, attribute_name = 'nam
     return df
 
 
-def negative_sampling(df, ratio_zeros_on_ones : float):
+def negative_sampling(df_binary, ratio_zeros_on_ones : float):
     '''
     creates a dataframe for training of recommender. 
     Only keeps a fractions of non-positive labels, as input matrix is extremely sparse.
