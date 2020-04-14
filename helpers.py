@@ -174,6 +174,34 @@ def assign_communities(communities, df_id, method_name, G, attribute_name = 'nam
     return df
 
 
+def negative_sampling(df, ratio_zeros_on_ones : float):
+    '''
+    creates a dataframe for training of recommender. 
+    Only keeps a fractions of non-positive labels, as input matrix is extremely sparse.
+    params: 
+    df: pd.DataFrame containing user_id, business_id, and binary label has_reviewed
+    '''
+    df_zeros = df_binary.loc[df_binary['has_reviewed'] == 0]
+    df_ones = df_binary.loc[df_binary['has_reviewed'] != 0]
+    df_zeros = df_zeros.sample(n=int(df_ones.shape[0]*ratio_zeros_on_ones))
+    return pd.concat([df_zeros, df_ones]).sample(frac=1).reset_index(drop=True)
+
+
+def get_binary_df(graph):
+    df_users = pd.read_csv(file_names['toronto_users'])
+    
+    users = {n for n, d in graph.nodes(data=True) if d['bipartite']==0}
+    businesses = set(graph) - users
+    
+    binary_data = bipartite.biadjacency_matrix(graph, users, column_order=businesses).todense()
+    df_binary = pd.DataFrame(binary_data, columns=businesses)
+    df_binary['user_id'] = users
+    df_binary = pd.melt(df_binary, id_vars='user_id')
+    df_binary.rename({'variable':'business_id', 'value':'has_reviewed'}, axis='columns', inplace=True)
+    # df_binary.set_index(list(graph.nodes()))
+    return df_binary
+
+
 if __name__ == '__main__':
     df = pd.read_csv(file_names['toronto_reviews_without_text'])
     df = compute_community_related_features(df)
